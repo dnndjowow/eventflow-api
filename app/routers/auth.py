@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.models.user import User as UserModel
 from app.schemas.user import UserCreate, UserResponse
+from app.dependency import get_current_user
 from app.database import get_async_db
 from app.auth import hash_password, verify_password, create_access_token
 from app.schemas.auth import AuthResponse
@@ -69,3 +70,8 @@ async def create_token(user_data: Annotated[OAuth2PasswordRequestForm, Depends()
     "access_token": access_token,
     "token_type": "bearer",
 }
+
+@router.get('/me', response_model=UserResponse)
+async def get_curr_user(user: Annotated[UserModel, Depends(get_current_user)]):
+
+    return user

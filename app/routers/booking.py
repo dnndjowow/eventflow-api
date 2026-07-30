@@ -9,7 +9,7 @@ from app.models.booking import Booking as BookingModel
 from app.models.event import Event as EventModel
 from app.models.user import User as UserModel
 from app.schemas.booking import BookingCreate, BookingResponse, BookingStatusPatch
-from app.dependency import check_x_token, RoleCheck
+from app.dependency import get_current_user, RoleCheck
 
 
 router = APIRouter(
@@ -19,7 +19,7 @@ router = APIRouter(
 
 
 @router.post('/', response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
-async def create_booking(booking: BookingCreate, user: Annotated[UserModel, Depends(check_x_token)], db: Annotated[AsyncSession, Depends(get_async_db)]):
+async def create_booking(booking: BookingCreate, user: Annotated[UserModel, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_async_db)]):
 
     event_check = await db.scalar(select(EventModel).where(
         EventModel.id == booking.event_id,
@@ -70,7 +70,7 @@ async def create_booking(booking: BookingCreate, user: Annotated[UserModel, Depe
 
 
 @router.get('/me', response_model=list[BookingResponse])
-async def get_booking_current_user(db: Annotated[AsyncSession, Depends(get_async_db)], user: Annotated[UserModel, Depends(check_x_token)]):
+async def get_booking_current_user(db: Annotated[AsyncSession, Depends(get_async_db)], user: Annotated[UserModel, Depends(get_current_user)]):
     return (await db.scalars(select(BookingModel).where(
         BookingModel.user_id == user.id
     ))).all()
@@ -84,7 +84,7 @@ async def get_all_bookings(db: Annotated[AsyncSession, Depends(get_async_db)]):
 
 
 @router.get('/{booking_id}', response_model=BookingResponse)
-async def get_booking(booking_id: int, db: Annotated[AsyncSession, Depends(get_async_db)], user: Annotated[UserModel, Depends(check_x_token)]):
+async def get_booking(booking_id: int, db: Annotated[AsyncSession, Depends(get_async_db)], user: Annotated[UserModel, Depends(get_current_user)]):
 
     booking = await db.scalar(
         select(BookingModel).where(
@@ -113,7 +113,7 @@ async def update_booking(
     booking_id: int,
     booking_status: BookingStatusPatch,
     db: Annotated[AsyncSession, Depends(get_async_db)],
-    user: Annotated[UserModel, Depends(check_x_token)]
+    user: Annotated[UserModel, Depends(get_current_user)]
 ):
     
     correct_transitions = {

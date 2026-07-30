@@ -8,7 +8,7 @@ from app.database import get_async_db
 from app.models.event import Event as EventModel
 from app.models.booking import Booking as BookingModel
 from app.schemas.event import EventCreate, EventPatch, EventResponse
-from app.dependency import check_x_token, RoleCheck
+from app.dependency import get_current_user, RoleCheck
 
 
 router = APIRouter(
@@ -26,7 +26,7 @@ async def create_event(event: EventCreate, db: Annotated[AsyncSession, Depends(g
     return new_event
 
 
-@router.get('/', response_model=list[EventResponse], dependencies=[Depends(check_x_token)])
+@router.get('/', response_model=list[EventResponse], dependencies=[Depends(get_current_user)])
 async def get_all_event(db: Annotated[AsyncSession, Depends(get_async_db)]):
 
     events = (await db.scalars(select(EventModel).where(
@@ -35,7 +35,7 @@ async def get_all_event(db: Annotated[AsyncSession, Depends(get_async_db)]):
 
     return events
 
-@router.get('/{event_id}', response_model=EventResponse, dependencies=[Depends(check_x_token)])
+@router.get('/{event_id}', response_model=EventResponse, dependencies=[Depends(get_current_user)])
 async def get_event(event_id: int, db: Annotated[AsyncSession, Depends(get_async_db)]):
 
     event = await db.scalar(select(EventModel).where(
