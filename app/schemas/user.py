@@ -9,10 +9,8 @@ class UserCreate(BaseModel):
     @field_validator('username', mode='after')
     @classmethod
     def check_username(cls, value: str):
-        
         if len(value.strip()) == 0:
             raise ValueError()
-        
         if any(role in value.strip().lower() for role in ['admin', 'manager', 'customer']):
             raise ValueError()
         
