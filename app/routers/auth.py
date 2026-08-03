@@ -6,10 +6,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.models.user import User as UserModel
 from app.schemas.user import UserCreate, UserResponse
-from app.dependency import get_current_user
+from app.dependency import get_current_user, decode_token
 from app.database import get_async_db
-from app.auth import hash_password, verify_password, create_access_token
-from app.schemas.auth import AuthResponse
+from app.auth import hash_password, verify_password, create_access_token, create_refresh_token
+from app.schemas.auth import AuthResponse, AccessTokenResponse, RefreshTokenCreate
 
 
 router = APIRouter(
@@ -65,11 +65,37 @@ async def create_token(user_data: Annotated[OAuth2PasswordRequestForm, Depends()
         )
     
     access_token = create_access_token(data={'sub': str(get_user.id)})
+    refresh_token = create_refresh_token(data={'sub': str(get_user.id)})
 
     return {
     "access_token": access_token,
+    'refresh_token': refresh_token,
     "token_type": "bearer",
 }
+
+@router.post('/token/access', response_model=AccessTokenResponse, status_code=status.HTTP_200_OK)
+async def create_acc_token(refresh_token: RefreshTokenCreate, db: Annotated[AsyncSession, Depends(get_async_db)]):
+
+    payload = decode_token(refresh_token.token, 'refresh')
+
+    user = await db.scalar(select(UserModel).where(
+        UserModel.id == int(payload.get('sub')),
+        UserModel.is_active == True,
+    )
+)
+    
+    if user is None:
+        raise HTTPException(
+            status_code=401
+        )
+
+    access_token = create_access_token(data={'sub': str(user.id)})
+    return {
+        'access_token': access_token,
+        "token_type": "bearer",
+    }
+
+
 
 @router.get('/me', response_model=UserResponse)
 async def get_curr_user(user: Annotated[UserModel, Depends(get_current_user)]):

@@ -2,7 +2,7 @@ from passlib.context import CryptContext
 from datetime import datetime, timezone, timedelta
 import jwt
 
-from app.config import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
+from app.config import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM, REFRESH_TOKEN_EXPIRE_DAYS
 
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -18,10 +18,17 @@ def verify_password(plain_password: str, hashed_password: str):
 
 def create_access_token(data: dict):
 
-    data_copy = data.copy()
+    payload = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     issued = datetime.now(timezone.utc)
     type = "access"
-    data_copy.update({'exp': expire, 'iat': issued, 'type': type})
-    return jwt.encode(data_copy, SECRET_KEY, algorithm=ALGORITHM)
+    payload.update({'exp': expire, 'iat': issued, 'type': type})
+    return jwt.encode(payload, SECRET_KEY, ALGORITHM)
 
+def create_refresh_token(data: dict):
+
+    payload = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    issued = datetime.now(timezone.utc)
+    payload.update({'exp': expire, 'iat': issued, 'type': 'refresh'})
+    return jwt.encode(payload, SECRET_KEY, ALGORITHM)

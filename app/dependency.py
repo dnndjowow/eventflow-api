@@ -14,54 +14,44 @@ from app.config import SECRET_KEY, ALGORITHM
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/token')
 
 
-x_cleint_list: list[dict] = []
-
-
-def x_cleint_checker(x_client_id: Annotated[str | None, Header()] = None):
-
-    if x_client_id is None:
-        raise HTTPException(
-            status_code=400
-        )
-    
-    if len(x_client_id.strip()) < 3:
-        raise HTTPException(
-            status_code=400
-        )
-    
-    x_cleint_list.append({'X-Client-Id': x_client_id})
-
-
-
-def decode_access_token(token: str):
+def decode_token(token: str, type_token: str):
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        
+
         if payload.get("sub") is None:
             raise jwt.InvalidTokenError()
 
-        if payload.get("type") != "access":
+        if payload.get("type") != type_token:
             raise jwt.InvalidTokenError()
+        
+        int(payload.get("sub"))
 
         return payload
+    
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=401,
+            headers={"WWW-Authenticate": "Bearer"}
+        )
 
-        
     except jwt.ExpiredSignatureError:
         raise HTTPException(
-            status_code=401
+            status_code=401,
+            headers={"WWW-Authenticate": "Bearer"}
         )
     
     except jwt.InvalidTokenError:
         raise HTTPException(
-            status_code=401
+            status_code=401,
+            headers={"WWW-Authenticate": "Bearer"}
         )
 
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Annotated[AsyncSession, Depends(get_async_db)]):
 
     try:
-        payload = decode_access_token(token)
+        payload = decode_token(token, type_token='access')
         sub = int(payload['sub'])
     except (jwt.PyJWKError, ValueError, TypeError):
         raise HTTPException(
